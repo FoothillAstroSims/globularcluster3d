@@ -307,20 +307,20 @@
               scene: {
                   aspectmode: 'cube',
                   xaxis: {
-                      range: [-100, 100],
+                      range: [-110, 110],
                       dtick: 10,
                       showgrid: false,
                       showticklabels: false,
                       visible: false
                   },
                   yaxis: {
-                      range: [-100, 100],
+                      range: [-110, 110],
                       showgrid: false,
                       showticklabels: false,
                       visible: false
                   },
                   zaxis: {
-                      range: [-100, 100],
+                      range: [-110, 110],
                       showgrid: false,
                       showticklabels: false,
                       showaxislabels: false,
@@ -330,7 +330,49 @@
                       eye: {x:0, y: 0, z: 2},
                       center: {x: 0, y: 0, z: 0},
                       up: {x:0, y: 1, z: 0}
-                  }
+                  },
+                  annotations: [
+                      {
+                          x: 110,
+                          y: 0,
+                          z: 0,
+                          xref: 'x',
+                          yref: 'y',
+                          zref: 'z',
+                          text: '0',
+                          showarrow: false,
+                      },
+                      {
+                          x: 0,
+                          y: 110,
+                          z: 0,
+                          xref: 'x',
+                          yref: 'y',
+                          zref: 'z',
+                          text: '90',
+                          showarrow: false,
+                      },
+                      {
+                          x: -110,
+                          y: 0,
+                          z: 0,
+                          xref: 'x',
+                          yref: 'y',
+                          zref: 'z',
+                          text: '180',
+                          showarrow: false,
+                      },
+                      {
+                          x: 0,
+                          y: -110,
+                          z: 0,
+                          xref: 'x',
+                          yref: 'y',
+                          zref: 'z',
+                          text: '270',
+                          showarrow: false,
+                      }
+                  ]
               }
           };
           
@@ -355,7 +397,7 @@
                   r0[i] = Math.random() * (inputs[0]);
               }
               theta0[i]=Math.random() * (360);
-              phi0[i]=Math.random() * (180)-90;
+              phi0[i]=(Math.random() * (180))-90;
           }
       }
 
@@ -378,8 +420,9 @@
               z[i]= r0[i] * Math.sin(phi0[i] * Math.PI/180);
               r[i]=Math.pow((Math.pow(x[i], 2) + Math.pow(y[i], 2)),0.5);
               theta[i]=(Math.atan2(y[i], x[i]) * 180 / Math.PI);
+              distance  = Math.sqrt(Math.pow(x[i],2) + Math.pow(y[i],2) + Math.pow(z[i],2));
               //sizes[i]=100.0 / Math.sqrt(Math.pow((x[i] - eye.x), 2) + Math.pow((y[i] - eye.y), 2) + Math.pow((z[i] - eye.z), 2)); 
-              sizes[i]= Math.min(20, 10.0 / Math.log10(r[i])); 
+              sizes[i]= Math.min(20, 10.0 / Math.log10(distance)); 
           }
           //console.log('  first point:');
           //console.log('    r0:     ' + r0[0]);

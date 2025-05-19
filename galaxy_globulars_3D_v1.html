@@ -167,14 +167,14 @@
           // adjust value by typing
           if (iMode == 0) {
                 inputs[iVar] = document.getElementById(interfaces[iVar][0]).value;
-                if (inputs[iVar] < limits[iVar][0]) {
-                    inputs[iVar] = limits[iVar][0];
-                    document.getElementById(interfaces[iVar][0]).value = limits[iVar][0];
-                }
-                if (inputs[iVar] > limits[iVar][1]) {
-                    inputs[iVar] = limits[iVar][1];
-                    document.getElementById(interfaces[iVar][0]).value = limits[iVar][1];
-                }
+//                if (inputs[iVar] < limits[iVar][0]) {
+//                    inputs[iVar] = limits[iVar][0];
+//                    document.getElementById(interfaces[iVar][0]).value = limits[iVar][0];
+//                }
+//                if (inputs[iVar] > limits[iVar][1]) {
+//                    inputs[iVar] = limits[iVar][1];
+//                    document.getElementById(interfaces[iVar][0]).value = limits[iVar][1];
+//                }
                 if (logsliders[iVar] == false) {
                     document.getElementById(interfaces[iVar][1]).value = inputs[iVar];
                 }
@@ -378,11 +378,10 @@
           
           camera = plotLayout.scene.camera;
           eye = plotLayout.scene.camera.eye;
-          console.log(' camera: ');
-          console.log(JSON.stringify(camera, null, 2));
-          console.log(' eye: ');
-          console.log(JSON.stringify(eye, null, 2));
-  
+          //console.log(' camera: ');
+          //console.log(JSON.stringify(camera, null, 2));
+          //console.log(' eye: ');
+          //console.log(JSON.stringify(eye, null, 2));
       }
       
       function generateGalaxy() {

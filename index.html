@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+  
+  <title>Globular Clusters 3D Simulator</title>
+    
+    <style>
+        .inputs {
+            display: inline-block;
+            border: 2px outset black;
+            background-color: lightblue;
+            text-align: left;
+            float:left;
+            height:500px;
+        }
+        .outputs {
+            display: inline-block;
+            border: 2px outset black;
+            background-color: lightblue;
+            text-align: left;
+            height:220px;
+            vertical-align: middle;
+        }
+        .visualization {
+            display: inline-block;
+            background-color: white;
+
+            color:white;
+        }
+        .upper-right {
+            position:absolute;
+            top:0;
+            right:10px;
+        }
+        .container {
+            display:flex;
+        }
+    </style>
+
+          <!-- P5 for animations -->
+        <script src="https://github.com/processing/p5.js/releases/download/v1.4.2/p5.min.js"></script>  
+            
+        <!-- Plotly for plotting, MIT license -->
+        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>       
+   
+        <!-- Math.js, Apache 2.0 license -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/7.1.0/math.min.js"></script>  
+
+    
+</head>
+
+<body style="font-family:sans-serif; font-size:15px; width:800px; margin-left:auto; margin-right:auto;">
+
+    <h3 id="pageHeader"><a href="https://foothill.edu/astronomy/astrosims.html" target=_blank>AstroSims</a> > Globular Clusters 3D Simulator</h3>
+    
+    
+<div class="container">
+        <div id="stellarParameters" class="inputs">
+                &nbsp; &nbsp; Galaxy radius <br>
+                     &nbsp; &nbsp;<input id="galaxyRadiusSlider" type ="range" min="10" max="100" step="1" value="Error" oninput="updateInputs(0,1)"> 
+                    <input type="text" id="galaxyRadiusDisplay" size="4" value="1" oninput="updateInputs(0,0)">000 lightyears <br><br>
+                &nbsp; &nbsp; Central bulge   <br>
+                     &nbsp; &nbsp;<input id="centralBulgeSlider" type ="range" min="5" max="50" step="1" value="Error" oninput="updateInputs(1,1)">
+                    <input type="text" id="centralBulgeDisplay" size="4" value="1" oninput="updateInputs(1,0)">000 lightyears <br><br>
+                &nbsp; &nbsp; # of globular clusters   <br>
+                     &nbsp; &nbsp;<input id="numberGlobularsSlider" type ="range" min="0" max="1000" step="1" value="Error" oninput="updateInputs(2,1)"> 
+                    <input type="text" id="numberGlobularsDisplay" size="4" value="1" oninput="updateInputs(2,0)">  <br><br>
+            
+                &nbsp; &nbsp; Distance from center <br>
+                     &nbsp; &nbsp;<input id="centerDistanceSlider" type ="range" min="0" max="100" step="1" value="Error" oninput="updateInputs(3,1)">        
+                    <input type="text" id="centerDistanceDisplay" size="4" value="1" oninput="updateInputs(3,0)">000 lightyears  <br>
+<!--                &nbsp; &nbsp; Detection limit  <br>
+                     &nbsp; &nbsp;<input id="rangeSlider" type ="range" min="10" max="100" step="1" value="Error" oninput="updateInputs(4,1)">
+                    <input type="text" id="rangeDisplay" size="4" value="1" oninput="updateInputs(4,0)">  <br>
+-->        
+            </div>
+        
+
+        <div id="galaxyMap" class="visualization">
+        </div>
+        <div id="infoLink" class="upper-right" onclick="popupInfo()">
+            <h3  onmouseclick="popupInfo()">&#9432;</h3>
+        </div>
+
+    
+</div>
+
+    
+  <script>
+
+
+      // galaxy and view initial parameters
+      //  radius, bulge radius, # globular clusters, distance from center, detection range
+      let inputs = [];
+      let limits = [];
+  
+      // initialize interface variables
+      // names of the interface elements for each variable
+      let interfaces = [['galaxyRadiusDisplay','galaxyRadiusSlider'],['centralBulgeDisplay','centralBulgeSlider'], 
+            ['numberGlobularsDisplay','numberGlobularsSlider'], ['centerDistanceDisplay','centerDistanceSlider']];
+      //, ['rangeDisplay','rangeSlider']];
+      // indicate if sliders are on a log scale
+      let logsliders = [false, false, false, false];
+
+      // initialize globular cluster coordinates
+      let r0 = [];
+      let theta0 = [];
+      let phi0 = [];
+      let radialGrid = [];
+      let angleGrid = [];
+      
+      let plotLayout = null;
+      let eventdata = null;
+      let camera = [9];
+      let eye = [9];
+      
+      
+      let plotter = document.getElementById('galaxyMap');
+      Plotly.react(plotter);
+
+      reset();
+
+      function setup() {
+          console.log("Setup Called");
+          boxright = document.getElementById("stellarParameters");
+          x0 = boxright.getBoundingClientRect().left;
+          x1 = boxright.getBoundingClientRect().right;
+          y0 = boxright.getBoundingClientRect().bottom;
+          
+          resetGalaxy = createButton('Reset');
+          resetGalaxy.position(x0+10,y0-25);
+          resetGalaxy.mousePressed(reset);
+
+          infoButton = createButton('size');
+          infoButton.position(x1-50,y0-25);
+          infoButton.mousePressed(setSize);
+          
+          generateGalaxy();
+          
+      }
+      
+      function reset() {
+          inputs = [50, 5, 150, 25];
+          limits = [[10, 100], [5, 50], [0, 1000], [0, 150]];
+          //console.log(' camera test 0: ' + camera);
+          //console.log(JSON.stringify(camera, null, 2));
+          //updateInputs(3,0); 
+//          console.log(' camera test 1: ' + camera);//
+//          console.log(JSON.stringify(camera, null, 2));
+          updateNumDisplay(); 
+//          console.log(' camera test 2: ' + camera);
+//          console.log(JSON.stringify(camera, null, 2));
+          initializePlot();
+//          console.log(' camera test 3: ' + camera);
+//          console.log(JSON.stringify(camera, null, 2));
+          generateGalaxy();
+//          console.log(' camera test 4: ' + camera);
+//          console.log(JSON.stringify(camera, null, 2));
+          drawGalaxy();
+//          console.log(' camera test 5: ' + camera);
+//          console.log(JSON.stringify(camera, null, 2));
+      }
+      
+      function updateInputs(iVar, iMode) {
+          console.log('updateInputs: ', + iVar + ' ' + iMode);
+          
+          // adjust value by typing
+          if (iMode == 0) {
+                inputs[iVar] = document.getElementById(interfaces[iVar][0]).value;
+                if (inputs[iVar] < limits[iVar][0]) {
+                    inputs[iVar] = limits[iVar][0];
+                    document.getElementById(interfaces[iVar][0]).value = limits[iVar][0];
+                }
+                if (inputs[iVar] > limits[iVar][1]) {
+                    inputs[iVar] = limits[iVar][1];
+                    document.getElementById(interfaces[iVar][0]).value = limits[iVar][1];
+                }
+                if (logsliders[iVar] == false) {
+                    document.getElementById(interfaces[iVar][1]).value = inputs[iVar];
+                }
+                if (logsliders[iVar] == true) {
+                    document.getElementById(interfaces[iVar][1]).value = Math.log10(inputs[iVar]);
+                }
+          }
+          // adjust values by slider
+          if (iMode == 1) {
+              if (logsliders[iVar] == false) {
+                  inputs[iVar] = document.getElementById(interfaces[iVar][1]).value;
+              }
+              if (logsliders[iVar] == true) {
+                  inputs[iVar] = trimNum(10**document.getElementById(interfaces[iVar][1]).value,2);
+              }
+          }               
+          
+          // vary the update function by slider adjustment 
+          if (iVar <= 2) {
+              generateGalaxy();          
+          }
+          
+          updateNumDisplay();
+
+          //initializePlot();
+          drawGalaxy();
+          
+          if (iVar == 3) {
+              console.log(' updating viewer distance');
+              console.log('   camera: ');
+              console.log(JSON.stringify(camera, null, 2));
+              //updateSizes();
+
+              //plotlyUpdate(eventdata);
+          }
+          
+      }
+
+      function updateNumDisplay() {
+          console.log('Update Numbers Display called ');
+
+          for (var i = 0; i < inputs.length; i++) {
+              document.getElementById(interfaces[i][0]).value = inputs[i].toLocaleString(undefined, {minimumFractionDigits:0, maximumSignificantDigits: 2});  
+              if (logsliders[i] == false) {
+                  document.getElementById(interfaces[i][1]).value = inputs[i];
+              }
+              else {
+                  document.getElementById(interfaces[i][1]).value = Math.log10(inputs[i]);
+              }
+          }
+      }
+      
+      function trimNum(input, toPrec) {
+                var numPlaces = Math.floor(Math.log10(input));
+                var divideBy = 10**(numPlaces - toPrec);
+                return divideBy * Math.floor(input / divideBy);
+      }
+      
+      function initializePlot() {
+          console.log(' initialize plot...');
+        
+          xc = [0];
+          yc = [0];
+          zc = [0];
+          for (let i = 0; i < 10; i++) {
+              radius = 10*(i+1);
+              for (let j = 0; j < 361; j++) {
+                  xc.push(radius * Math.cos(j * Math.PI / 180));
+                  yc.push(radius * Math.sin(j * Math.PI / 180));
+                  zc.push(0);
+              }
+          };
+          radialGrid = {
+                  type: "scatter3d",
+                  mode: 'lines',
+                  x:xc,
+                  y:yc,
+                  z:zc,
+                  marker: {
+                      color: "gray",
+                  },
+                  cliponaxis: false
+              };
+          
+          xa = [0];
+          ya = [0];
+          za = [0];
+          for (let i = 0; i < 8; i++) {
+              radius = 100;
+              xa.push(0);
+              ya.push(0);
+              za.push(0);
+              xa.push(radius * Math.cos(45*i * Math.PI / 180));
+              ya.push(radius * Math.sin(45*i * Math.PI / 180));
+              za.push(0);
+            };
+          azimuthGrid = {
+                  type: "scatter3d",
+                  mode: 'lines',
+                  x:xa,
+                  y:ya,
+                  z:za,
+                  marker: {
+                      color: "gray",
+                  },
+                  cliponaxis: false
+          };            
+
+          // initialize plot
+          imWidth = 500;
+          plotLayout = {
+              margin: {
+                  l:0,
+                  t:0,
+                  b:0,
+                  r:0,
+                  pad: 0
+              },
+              hovermode:'closest', 
+              title: {
+                  font: {
+                      family: 'Calibri, monospace',
+                      size: 22,
+                      color: 'black'
+                  },
+                  x: 0.01,
+                  y: 1
+              },
+              showlegend: false,
+              scene: {
+                  aspectmode: 'cube',
+                  xaxis: {
+                      range: [-100, 100],
+                      dtick: 10,
+                      showgrid: false,
+                      showticklabels: false,
+                      visible: false
+                  },
+                  yaxis: {
+                      range: [-100, 100],
+                      showgrid: false,
+                      showticklabels: false,
+                      visible: false
+                  },
+                  zaxis: {
+                      range: [-100, 100],
+                      showgrid: false,
+                      showticklabels: false,
+                      showaxislabels: false,
+                      visible: false
+                  },
+                  camera: {
+                      eye: {x:0, y: 0, z: 2},
+                      center: {x: 0, y: 0, z: 0},
+                      up: {x:0, y: 1, z: 0}
+                  }
+              }
+          };
+          
+          camera = plotLayout.scene.camera;
+          eye = plotLayout.scene.camera.eye;
+          console.log(' camera: ');
+          console.log(JSON.stringify(camera, null, 2));
+          console.log(' eye: ');
+          console.log(JSON.stringify(eye, null, 2));
+  
+      }
+      
+      function generateGalaxy() {
+          //console.log("Generate Galaxy Called");
+          r0=[];
+          theta0=[];
+          phi0=[];
+          for (let i = 0; i < inputs[2]; i++) {
+              if (i < 0.2 * inputs[2]) {
+                  r0[i] = Math.random() * (inputs[1]);
+              } else {
+                  r0[i] = Math.random() * (inputs[0]);
+              }
+              theta0[i]=Math.random() * (360);
+              phi0[i]=Math.random() * (180)-90;
+          }
+      }
+
+      function drawGalaxy() {
+          //console.log('Draw Galaxy called ');
+          //console.log('  distance from galaxy: ' + inputs[3]);
+          offset = inputs[3] * 1;
+          r1 = [];
+          x = [];
+          y = [];
+          z = [];
+          r = [];
+          theta = [];
+          sizes = [];
+          for (let i = 0; i < inputs[2]; i++) {
+              r1[i] = r0[i] * Math.cos(phi0[i] * Math.PI/180);
+              x[i] = (r1[i] * Math.cos(theta0[i] * Math.PI/180));
+              x[i] = x[i] + offset;
+              y[i]= r1[i] * Math.sin(theta0[i] * Math.PI/180);
+              z[i]= r0[i] * Math.sin(phi0[i] * Math.PI/180);
+              r[i]=Math.pow((Math.pow(x[i], 2) + Math.pow(y[i], 2)),0.5);
+              theta[i]=(Math.atan2(y[i], x[i]) * 180 / Math.PI);
+              //sizes[i]=100.0 / Math.sqrt(Math.pow((x[i] - eye.x), 2) + Math.pow((y[i] - eye.y), 2) + Math.pow((z[i] - eye.z), 2)); 
+              sizes[i]= Math.min(20, 10.0 / Math.log10(r[i])); 
+          }
+          //console.log('  first point:');
+          //console.log('    r0:     ' + r0[0]);
+                    
+          data1 = {
+                  type: "scatter3d",
+                  mode: 'markers',
+                  x:x,
+                  y:y,
+                  z:z,
+                  name: "Observed positions",
+                  marker: {
+                      color: "black",
+                      size: sizes,
+                      opacity: 0.5
+                  }
+              };
+          
+          data = [data1, radialGrid, azimuthGrid];
+          //Plotly.react(plotter, [data1, radialGrid], plotLayout);
+          //console.log('plotter.scene: ');
+          //console.log(plotter.layout.scene);
+          //plotLayout.scene.camera = plotter.scene.camera;
+          Plotly.react(plotter, data, plotLayout);
+
+        }
+
+      function popupInfo() {
+          var infoOption;
+          if (confirm("This tool simulates the distribution of globular clusters in a disk galaxy, as seen from a star within that galaxy.  The initial parameters approximate our own view of globular clusters in our own galaxy. \n \n  The Globular Cluster Map simulation is part of the Foothill College AstroSims project.  Click OK to open the AstroSims homepage in a new tab to see our other simulations, as well as our listing of more than 300 other Astronomy education simulations and visualizations from authors around the world. \n \n Open https://foothill.edu/astronomy/astrosims.html in a new tab?")) {
+              window.open("https://foothill.edu/astronomy/astrosims.html","_blank");
+          }
+      }
+                    
+ 
+      
+      function setSize() {
+          update = {
+              'marker.size': 3
+            };
+          Plotly.restyle(plotter, update);
+      }
+      
+//  SECTION TO ADD - BUTTONS TO CONTROL VIEW Zoom in / out, rotate
+      
+      
+//  SECTION TO ADD - ADJUSTING GLOBULAR CLUSTER DISPLAY SIZE / OPACITY BY DISTANCE FROM CAMERA
+//  STICKY POINTS: responding to zoom 
+      
+//      function plotlyUpdate(eventdata){
+//          console.log('  Plotly Update ');
+//          if (eventdata && eventdata["scene.camera"]) {
+//              //console.log('eventdata: ' + eventdata);
+//              //console.log(JSON.stringify(eventdata, null, 2));
+//              camera = eventdata["scene.camera"];
+//              eye = camera.eye; // Camera position (eye)
+//              console.log(' camera: ');
+//              console.log(JSON.stringify(camera, null, 2));
+//          }
+//          updateSizes();
+//      }
+      
+//      function updateSizes() {
+//          
+//          // Get existing trace data and properties
+//          let trace = plotter.data[0];
+//          let x = trace.x;
+//          let y = trace.y;
+//          let z = trace.z;
+//            
+//          console.log(' Update Sizes, eye: ');
+//          console.log(JSON.stringify(eye, null, 2));
+//          console.log(' calculation test, eye: ');
+//          console.log(Math.sqrt(
+//                 Math.pow(x[0] - eye.x, 2) + Math.pow(y[0] - eye.y, 2) + Math.pow(z[0] - eye.z, 2)
+//            ));
+//          let newMarkerSizes = [];
+//          for(let i=0; i<x.length; i++){
+//            // Calculate distance from the camera to the point
+//            const dist = Math.sqrt(
+//                  Math.pow(x[i] - eye.x, 2) + Math.pow(y[i] - eye.y, 2) + Math.pow(z[i] - eye.z, 2)
+//            );
+//            // Example: Scale size inversely with distance
+//            newMarkerSizes.push(100 / dist);
+//          };
+//          console.log(' plotter data 0: ');
+//          console.log(JSON.stringify(plotter.data[0], null, 2));
+//          // Update the marker size of your scatter3d trace
+//          update = {
+//              'marker.size': newMarkerSizes
+//            };
+//          console.log(' update: ');
+//          console.log(JSON.stringify(update, null, 2));
+          //Plotly.restyle(plotter, update);
+//          console.log(' plotter data 0, updated: ');
+//          console.log(JSON.stringify(plotter.data[0], null, 2));
+//          Plotly.relayout(plotter, {'scene.camera': camera});
+//          //console.dir(' updated plotter data: ' + plotter.data);
+//          //console.log(JSON.stringify(plotLayout, null, 2));
+//      }
+      
+      
+//      // setup listener for plotly events changing the camera view / rotating, etc.
+//      plotter.on('plotly_relayouting', function(eventdata) {
+//          plotlyUpdate(eventdata);
+//      });
+      
+       
+      // For using URL parameters *************************************************************************
+      //   read parameters from URL
+//      var urlParams = (new URL(document.location)).searchParams;
+//      //console.log("Params are: "+urlParams);
+//      if (urlParams.has('mass') == true) {
+//          document.getElementById(interfaces[0][0]).value = urlParams.get('mass');
+//          updateInputs(0,0);
+//      }
+//      if (urlParams.has('luminosity') == true) {
+//          document.getElementById(interfaces[1][0]).value = urlParams.get('luminosity');
+//          updateInputs(1,0);
+//      }
+//      if (urlParams.has('realistic') == true) {
+//          document.getElementById("realisticOnly").checked = true;
+//          updateRealistic();
+//      }
+//      if (urlParams.has('fixedMass') == true) {
+//          document.getElementById(interfaces[0][0]).disabled = true;
+//          document.getElementById(interfaces[0][1]).disabled = true;
+//          document.getElementById("realisticOnly").disabled = true;
+//          document.getElementById("realisticLabel").style.color = "#aaaaaa";
+//      }
+//      if (urlParams.has('fixedLuminosity') == true) {
+//          document.getElementById(interfaces[1][0]).disabled = true;
+//          document.getElementById(interfaces[1][1]).disabled = true;
+//          document.getElementById("realisticOnly").disabled = true;
+//          document.getElementById("realisticLabel").style.color = "#aaaaaa";
+//      }
+//      if (urlParams.has('hideHeader') == true) {
+//          //console.log("Fixed luminosity");
+//          document.getElementById("pageHeader").style.display = "none";
+//      }
+
+  </script>
+
+
+</body></html>

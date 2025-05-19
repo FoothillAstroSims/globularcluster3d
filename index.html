@@ -253,6 +253,8 @@
                   x:xc,
                   y:yc,
                   z:zc,
+                  hoverinfo: 'none',
+                  name: " ",
                   marker: {
                       color: "gray",
                   },
@@ -277,6 +279,8 @@
                   x:xa,
                   y:ya,
                   z:za,
+                  hoverinfo: 'none',
+                  name: " ",
                   marker: {
                       color: "gray",
                   },
@@ -411,17 +415,18 @@
           r = [];
           theta = [];
           sizes = [];
+          distances = [];
           for (let i = 0; i < inputs[2]; i++) {
               r1[i] = r0[i] * Math.cos(phi0[i] * Math.PI/180);
               x[i] = (r1[i] * Math.cos(theta0[i] * Math.PI/180));
               x[i] = x[i] + offset;
-              y[i]= r1[i] * Math.sin(theta0[i] * Math.PI/180);
+              y[i]= (r1[i] * Math.sin(theta0[i] * Math.PI/180));
               z[i]= r0[i] * Math.sin(phi0[i] * Math.PI/180);
-              r[i]=Math.pow((Math.pow(x[i], 2) + Math.pow(y[i], 2)),0.5);
-              theta[i]=(Math.atan2(y[i], x[i]) * 180 / Math.PI);
-              distance  = Math.sqrt(Math.pow(x[i],2) + Math.pow(y[i],2) + Math.pow(z[i],2));
+              //r[i]=Math.pow((Math.pow(x[i], 2) + Math.pow(y[i], 2)),0.5);
+              //theta[i]=(Math.atan2(y[i], x[i]) * 180 / Math.PI);
+              distances[i]  = Math.sqrt(Math.pow(x[i],2) + Math.pow(y[i],2) + Math.pow(z[i],2));
               //sizes[i]=100.0 / Math.sqrt(Math.pow((x[i] - eye.x), 2) + Math.pow((y[i] - eye.y), 2) + Math.pow((z[i] - eye.z), 2)); 
-              sizes[i]= Math.min(20, 10.0 / Math.log10(distance)); 
+              sizes[i]= Math.min(20, 10.0 / Math.log10(distances[i])); 
           }
           //console.log('  first point:');
           //console.log('    r0:     ' + r0[0]);
@@ -429,14 +434,16 @@
           data1 = {
                   type: "scatter3d",
                   mode: 'markers',
+                  text: distances,
+                  hovertemplate: '%{text:.0f} light-years',
                   x:x,
                   y:y,
                   z:z,
-                  name: "Observed positions",
+                  name: "",
                   marker: {
                       color: "black",
                       size: sizes,
-                      opacity: 0.5
+                      opacity: 0.5,
                   }
               };
           
